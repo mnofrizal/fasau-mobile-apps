@@ -1,49 +1,52 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import useTaskStore from "../store/taskStore";
+import { format } from "date-fns";
 
 export default function TaskDetailScreen({ route, navigation }) {
   const { colors } = useTheme();
+  const task = useTaskStore((state) => state.getTaskById(route.params?.taskId));
 
-  // Dummy task data - in a real app, you would fetch this based on taskId
-  const task = {
-    id: route.params?.taskId || 1,
-    title: "Design UI/UX",
-    description:
-      "Create a modern and user-friendly interface for the mobile application. This includes wireframes, mockups, and interactive prototypes.",
-    deadline: "2024-02-28",
-    priority: "High",
-    status: "In Progress",
-    assignedTo: "John Doe",
-    progress: 65,
-    subtasks: [
-      { id: 1, title: "Create Wireframes", completed: true },
-      { id: 2, title: "Design System", completed: true },
-      { id: 3, title: "Interactive Prototype", completed: false },
-      { id: 4, title: "User Testing", completed: false },
-    ],
-  };
-
-  const handleComplete = () => {
-    navigation.navigate("TaskComplete");
-  };
+  if (!task) {
+    return (
+      <SafeAreaView
+        style={{ backgroundColor: colors.background }}
+        className="flex-1 justify-center items-center"
+      >
+        <Text style={{ color: colors.text }} className="text-lg">
+          Task not found
+        </Text>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          className="mt-4 px-6 py-3 bg-blue-500 rounded-lg"
+        >
+          <Text className="text-white font-semibold">Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "Completed":
+      case "COMPLETED":
         return colors.isDarkMode
-          ? "bg-slate-700 text-green-300"
+          ? "bg-green-700 text-green-300"
           : "bg-green-100 text-green-800";
-      case "In Progress":
+      case "INPROGRESS":
         return colors.isDarkMode
-          ? "bg-slate-700 text-blue-300"
+          ? "bg-blue-700 text-blue-200"
           : "bg-blue-100 text-blue-800";
-      case "Not Started":
+      case "CANCEL":
         return colors.isDarkMode
-          ? "bg-slate-700 text-slate-300"
-          : "bg-slate-100 text-slate-800";
+          ? "bg-slate-700 text-red-300"
+          : "bg-red-100 text-red-800";
+      case "BACKLOG":
+        return colors.isDarkMode
+          ? "bg-slate-700 text-orange-300"
+          : "bg-orange-100 text-orange-800";
       default:
         return colors.isDarkMode
           ? "bg-slate-700 text-slate-300"
@@ -71,7 +74,9 @@ export default function TaskDetailScreen({ route, navigation }) {
                 task.status
               )}`}
             >
-              <Text className="font-medium">{task.status}</Text>
+              <Text className={`font-medium ${getStatusColor(task.status)}`}>
+                {task.status}
+              </Text>
             </View>
           </View>
 
@@ -81,136 +86,174 @@ export default function TaskDetailScreen({ route, navigation }) {
           >
             {task.title}
           </Text>
-
-          <View className="flex-row items-center mt-2">
-            <Ionicons
-              name="person-circle"
-              size={20}
-              color={colors.textSecondary}
-            />
-            <Text style={{ color: colors.textSecondary }} className="ml-1">
-              {task.assignedTo}
-            </Text>
-          </View>
         </View>
 
         {/* Task Details */}
         <View style={{ backgroundColor: colors.card }} className="mt-4 p-4">
-          <Text
-            style={{ color: colors.text }}
-            className="text-lg font-semibold"
-          >
-            Description
-          </Text>
-          <Text style={{ color: colors.textSecondary }} className="mt-2">
-            {task.description}
-          </Text>
-
-          <View className="mt-4">
+          <View className="mb-4">
             <Text
               style={{ color: colors.text }}
-              className="text-lg font-semibold"
+              className="text-lg font-semibold mb-2"
             >
-              Due Date
+              Category
             </Text>
-            <View className="flex-row items-center mt-2">
+            <View className="flex-row items-center">
               <Ionicons
-                name="calendar"
+                name="bookmark-outline"
                 size={20}
                 color={colors.textSecondary}
               />
               <Text style={{ color: colors.textSecondary }} className="ml-2">
-                {task.deadline}
+                {task.category}
               </Text>
             </View>
           </View>
 
-          <View className="mt-4">
+          {task.keterangan && (
+            <View className="mb-4">
+              <Text
+                style={{ color: colors.text }}
+                className="text-lg font-semibold mb-2"
+              >
+                Description
+              </Text>
+              <Text style={{ color: colors.textSecondary }}>
+                {task.keterangan}
+              </Text>
+            </View>
+          )}
+
+          <View className="mb-4">
             <Text
               style={{ color: colors.text }}
-              className="text-lg font-semibold"
+              className="text-lg font-semibold mb-2"
             >
-              Priority
+              Created
             </Text>
-            <View className="flex-row items-center mt-2">
-              <Ionicons name="flag" size={20} color="#EF4444" />
-              <Text className="text-red-600 ml-2">{task.priority}</Text>
+            <View className="flex-row items-center">
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={colors.textSecondary}
+              />
+              <Text style={{ color: colors.textSecondary }} className="ml-2">
+                {format(new Date(task.createdAt), "PPP")}
+              </Text>
             </View>
           </View>
 
-          <View className="mt-4">
-            <Text
-              style={{ color: colors.text }}
-              className="text-lg font-semibold"
-            >
-              Progress
-            </Text>
+          {task.isUrgent && (
             <View
-              className={`h-2 ${
-                colors.isDarkMode ? "bg-slate-700" : "bg-slate-200"
-              } rounded-full mt-2`}
+              style={{ backgroundColor: "#fee2e2" }}
+              className="p-3 rounded-lg mb-4"
             >
-              <View
-                className="h-2 bg-blue-500 rounded-full"
-                style={{ width: `${task.progress}%` }}
-              />
+              <View className="flex-row items-center">
+                <Ionicons name="alert-circle" size={20} color="#dc2626" />
+                <Text className="ml-2 font-medium text-red-600">
+                  Urgent Task
+                </Text>
+              </View>
             </View>
-            <Text style={{ color: colors.textSecondary }} className="mt-1">
-              {task.progress}% Complete
-            </Text>
-          </View>
+          )}
         </View>
 
-        {/* Subtasks */}
+        {/* Status History */}
         <View style={{ backgroundColor: colors.card }} className="mt-4 p-4">
           <Text
             style={{ color: colors.text }}
-            className="text-lg font-semibold mb-2"
+            className="text-lg font-semibold mb-4"
           >
-            Subtasks
+            Status History
           </Text>
-          {task.subtasks.map((subtask) => (
-            <View
-              key={subtask.id}
-              style={{ borderColor: colors.border }}
-              className="flex-row items-center py-3 border-b last:border-b-0"
+          {!task.statusHistory?.length ? (
+            <Text
+              style={{ color: colors.textSecondary }}
+              className="text-center py-4"
             >
+              No status history available
+            </Text>
+          ) : (
+            task.statusHistory.map((history, index) => (
               <View
+                key={index}
                 style={{ borderColor: colors.border }}
-                className={`w-6 h-6 rounded-full border-2 ${
-                  subtask.completed ? "bg-blue-500 border-blue-500" : ""
-                } mr-3 items-center justify-center`}
+                className={`pb-4 ${
+                  index !== task.statusHistory.length - 1 ? "border-l ml-2" : ""
+                }`}
               >
-                {subtask.completed && (
-                  <Ionicons name="checkmark" size={14} color="white" />
-                )}
+                <View className="flex-row items-start">
+                  <View
+                    className={`w-4 h-4 rounded-full ${
+                      colors.isDarkMode ? "bg-slate-700" : "bg-slate-200"
+                    } -ml-2`}
+                  />
+                  <View className="ml-4">
+                    <View
+                      className={`px-2 py-1 rounded ${getStatusColor(
+                        history.status
+                      )}`}
+                    >
+                      <Text className="text-sm font-medium">
+                        {history.status}
+                      </Text>
+                    </View>
+                    <Text
+                      style={{ color: colors.textSecondary }}
+                      className="text-sm mt-1"
+                    >
+                      {history.notes}
+                    </Text>
+                    <View className="flex-row items-center mt-1">
+                      <Text
+                        style={{ color: colors.textSecondary }}
+                        className="text-xs"
+                      >
+                        {format(new Date(history.createdAt), "PPp")}
+                      </Text>
+                      <Text
+                        style={{ color: colors.textSecondary }}
+                        className="text-xs ml-2"
+                      >
+                        • {history.changedBy}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
               </View>
-              <Text
-                style={{
-                  color: subtask.completed ? colors.textSecondary : colors.text,
-                }}
-                className={subtask.completed ? "line-through" : ""}
-              >
-                {subtask.title}
-              </Text>
-            </View>
-          ))}
+            ))
+          )}
         </View>
       </ScrollView>
 
-      {/* Complete Button */}
+      {/* Action Buttons */}
       <View
         style={{ backgroundColor: colors.card, borderColor: colors.border }}
         className="p-4 border-t"
       >
-        <TouchableOpacity
-          className="py-3 rounded-lg bg-blue-500"
-          onPress={handleComplete}
-        >
-          <Text className="text-white text-center font-semibold">
-            Complete Task
-          </Text>
-        </TouchableOpacity>
+        {task.status !== "COMPLETED" && task.status !== "CANCEL" && (
+          <View className="flex-row space-x-4">
+            <TouchableOpacity
+              className="flex-1 py-3 rounded-lg bg-red-500"
+              onPress={() => {
+                /* Handle cancel task */
+              }}
+            >
+              <Text className="text-white text-center font-semibold">
+                Cancel Task
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="flex-1 py-3 rounded-lg bg-blue-500"
+              onPress={() =>
+                navigation.navigate("TaskComplete", { taskId: task.id })
+              }
+            >
+              <Text className="text-white text-center font-semibold">
+                Complete Task
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );

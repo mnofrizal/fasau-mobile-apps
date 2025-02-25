@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,13 +6,29 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import useAuthStore from "../store/authStore";
+import useTaskStore from "../store/taskStore";
+import { TaskCategory, TaskStatus } from "../services/taskService";
+import { format } from "date-fns";
 
 export default function HomeScreen({ navigation }) {
   const { colors } = useTheme();
+  const user = useAuthStore((state) => state.user);
+  const { tasks, isLoading, error, fetchTasks, getTaskStats } = useTaskStore();
+
+  useEffect(() => {
+    console.log("🔄 Fetching initial tasks...");
+    fetchTasks();
+  }, []);
+
+  useEffect(() => {
+    // console.log("📱 Current tasks in HomeScreen:", tasks);
+  }, [tasks]);
 
   const menuItems = [
     { id: 1, title: "Tasks", icon: "list", color: "#3b82f6", route: "Tasks" },
@@ -67,51 +83,72 @@ export default function HomeScreen({ navigation }) {
     },
   ];
 
-  const statCards = [
-    { title: "Total Tasks", count: 12, color: "#3b82f6", icon: "list" },
-    {
-      title: "Completed",
-      count: 5,
-      color: "#10b981",
-      icon: "checkmark-circle",
-    },
-    { title: "Pending", count: 7, color: "#f59e0b", icon: "time" },
-  ];
+  // Get task stats
+  const taskStats = useMemo(() => {
+    const stats = getTaskStats();
+    console.log("🏠 HomeScreen stats:", stats);
 
-  const recentTasks = [
-    {
-      id: 1,
-      title: "Design UI/UX",
-      deadline: "2024-02-28",
-      status: "In Progress",
-      priority: "High",
-    },
-    {
-      id: 2,
-      title: "Develop Backend API",
-      deadline: "2024-03-05",
-      status: "Pending",
-      priority: "Medium",
-    },
-    {
-      id: 3,
-      title: "Testing Phase",
-      deadline: "2024-03-10",
-      status: "Not Started",
-      priority: "Low",
-    },
-  ];
+    return [
+      {
+        title: "Total Tasks",
+        count: stats.total,
+        color: "#3b82f6",
+        icon: "list",
+      },
+      {
+        title: "Active Tasks",
+        count: stats.inProgress + stats.backlog,
+        color: "#f59e0b",
+        icon: "time",
+      },
+      {
+        title: "Completed",
+        count: stats.completed,
+        color: "#10b981",
+        icon: "checkmark-circle",
+      },
+    ];
+  }, [tasks]); // Recalculate when tasks change
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "High":
-        return colors.isDarkMode ? "#ef4444" : "#dc2626";
-      case "Medium":
-        return colors.isDarkMode ? "#f59e0b" : "#d97706";
-      case "Low":
-        return colors.isDarkMode ? "#10b981" : "#059669";
+  // Get 3 most recent tasks
+  const recentTasks = useMemo(() => {
+    if (!tasks?.length) return [];
+    console.log("🔄 Calculating recent tasks from:", tasks.length, "tasks");
+
+    return [...tasks]
+      .filter(
+        (task) =>
+          task.status !== TaskStatus.COMPLETED &&
+          task.status !== TaskStatus.CANCEL
+      )
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 7);
+  }, [tasks]);
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case TaskStatus.COMPLETED:
+        return "#10b981"; // green
+      case TaskStatus.INPROGRESS:
+        return "#3b82f6"; // blue
+      case TaskStatus.CANCEL:
+        return "#ef4444"; // red
+      case TaskStatus.BACKLOG:
       default:
-        return colors.textSecondary;
+        return "#f59e0b"; // amber
+    }
+  };
+
+  const getCategoryColor = (category) => {
+    switch (category) {
+      case TaskCategory.TASK:
+        return "#10b981"; // green
+      case TaskCategory.TEMUAN:
+        return "#f59e0b"; // blue
+      case TaskCategory.LAPORAN:
+        return "#8b5cf6"; // purple
+      default:
+        return "#f59e0b"; // amber
     }
   };
 
@@ -120,7 +157,12 @@ export default function HomeScreen({ navigation }) {
       style={{ backgroundColor: colors.background }}
       className="flex-1"
     >
-      <ScrollView className="flex-1">
+      <ScrollView
+        className="flex-1"
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={fetchTasks} />
+        }
+      >
         {/* Header Section */}
         <View className="p-4 mb-2">
           <View className="flex-row justify-between items-center">
@@ -133,14 +175,14 @@ export default function HomeScreen({ navigation }) {
               </Text>
               <Text
                 style={{ color: colors.text }}
-                className="text-2xl font-bold"
+                className="text-2xl uppercase font-semibold"
               >
-                PT PLN UIW SULSELRABAR
+                {user?.username}
               </Text>
             </View>
             <TouchableOpacity
               onPress={() => navigation.navigate("Profile")}
-              className="w-10 h-10 rounded-full overflow-hidden"
+              className="w-12 h-12 rounded-full overflow-hidden"
             >
               <Image
                 source={require("../../assets/icon.png")}
@@ -151,27 +193,29 @@ export default function HomeScreen({ navigation }) {
           </View>
 
           {/* Search Bar */}
-          <View
-            style={{
-              backgroundColor: colors.isDarkMode ? "#1f2937" : "#f8fafc",
-              borderColor: colors.border,
-            }}
-            className="flex-row items-center px-4 py-3 rounded-xl mt-4 border"
-          >
-            <Ionicons name="search" size={20} color={colors.textSecondary} />
-            <TextInput
-              placeholder="Search for tasks..."
-              placeholderTextColor={colors.textSecondary}
-              style={{ color: colors.text }}
-              className="flex-1 ml-2 text-base"
-            />
-          </View>
+          {user?.role === "ADMIN" && (
+            <View
+              style={{
+                backgroundColor: colors.isDarkMode ? "#1f2937" : "#f8fafc",
+                borderColor: colors.border,
+              }}
+              className="flex-row items-center px-4 py-3 rounded-xl mt-4 border"
+            >
+              <Ionicons name="search" size={20} color={colors.textSecondary} />
+              <TextInput
+                placeholder="Search for tasks..."
+                placeholderTextColor={colors.textSecondary}
+                style={{ color: colors.text }}
+                className="flex-1 ml-2 text-base"
+              />
+            </View>
+          )}
         </View>
 
         {/* Stats Grid */}
         <View className="px-4">
           <View className="flex-row justify-between">
-            {statCards.map((stat, index) => (
+            {taskStats.map((stat, index) => (
               <TouchableOpacity
                 key={index}
                 style={{
@@ -202,42 +246,46 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Menu Grid */}
-        <View className="p-4">
-          <Text
-            style={{ color: colors.text }}
-            className="text-lg font-semibold mb-4"
-          >
-            Quick Menu
-          </Text>
-          <View className="flex-row flex-wrap justify-between">
-            {menuItems.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={{
-                  backgroundColor: colors.isDarkMode ? colors.card : "#ffffff",
-                  width: "23%",
-                }}
-                className="mb-4 p-3 rounded-2xl shadow-sm items-center"
-                onPress={() => navigation.navigate(item.route)}
-              >
-                <View
-                  style={{ backgroundColor: `${item.color}20` }}
-                  className="w-12 h-12 rounded-full items-center justify-center mb-2"
+        {/* Menu Grid - Only visible for ADMIN */}
+        {user?.role === "ADMIN" && (
+          <View className="p-4">
+            <Text
+              style={{ color: colors.text }}
+              className="text-lg font-semibold mb-4"
+            >
+              Quick Menu
+            </Text>
+            <View className="flex-row flex-wrap justify-between">
+              {menuItems.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={{
+                    backgroundColor: colors.isDarkMode
+                      ? colors.card
+                      : "#ffffff",
+                    width: "23%",
+                  }}
+                  className="mb-4 p-3 rounded-2xl shadow-sm items-center"
+                  onPress={() => navigation.navigate(item.route)}
                 >
-                  <Ionicons name={item.icon} size={24} color={item.color} />
-                </View>
-                <Text
-                  style={{ color: colors.text }}
-                  className="text-center text-xs"
-                  numberOfLines={1}
-                >
-                  {item.title}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <View
+                    style={{ backgroundColor: `${item.color}20` }}
+                    className="w-12 h-12 rounded-full items-center justify-center mb-2"
+                  >
+                    <Ionicons name={item.icon} size={24} color={item.color} />
+                  </View>
+                  <Text
+                    style={{ color: colors.text }}
+                    className="text-center text-xs"
+                    numberOfLines={1}
+                  >
+                    {item.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Recent Tasks */}
         <View className="p-4">
@@ -276,33 +324,61 @@ export default function HomeScreen({ navigation }) {
                   </Text>
                   <Text
                     style={{ color: colors.textSecondary }}
-                    className="text-sm"
+                    className="text-sm mb-2"
                   >
-                    Due: {task.deadline}
+                    {task.taskReport?.pelapor
+                      ? task.taskReport?.pelapor
+                      : "Admin"}{" "}
+                    • {task.keterangan}
                   </Text>
-                </View>
-                <View className="flex-row items-center">
-                  <View
-                    style={{
-                      backgroundColor: colors.isDarkMode
-                        ? `${getPriorityColor(task.priority)}20`
-                        : `${getPriorityColor(task.priority)}15`,
-                    }}
-                    className="px-3 py-1 rounded-full mr-2"
-                  >
-                    <Text
-                      style={{ color: getPriorityColor(task.priority) }}
-                      className="text-xs font-medium"
+                  <View className="flex-row items-center">
+                    <View
+                      style={{
+                        backgroundColor: `${getCategoryColor(task.category)}20`,
+                      }}
+                      className="px-3 py-1 rounded-full mr-2"
                     >
-                      {task.priority}
-                    </Text>
+                      <Text
+                        style={{ color: getCategoryColor(task.category) }}
+                        className="text-xs font-medium"
+                      >
+                        {task.category}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        backgroundColor: `${getStatusColor(task.status)}20`,
+                      }}
+                      className="px-3 py-1 rounded-full mr-2"
+                    >
+                      <Text
+                        style={{ color: getStatusColor(task.status) }}
+                        className="text-xs font-medium"
+                      >
+                        {task.status}
+                      </Text>
+                    </View>
+                    {task.isUrgent && (
+                      <View
+                        style={{ backgroundColor: "#ef444420" }}
+                        className="px-3 py-1 rounded-full"
+                      >
+                        <Text
+                          style={{ color: "#ef4444" }}
+                          className="text-xs font-medium"
+                        >
+                          Urgent
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={colors.textSecondary}
-                  />
                 </View>
+                <Text
+                  style={{ color: colors.textSecondary }}
+                  className="text-xs"
+                >
+                  {format(new Date(task.createdAt), "MMM d, yyyy")}
+                </Text>
               </View>
             </TouchableOpacity>
           ))}

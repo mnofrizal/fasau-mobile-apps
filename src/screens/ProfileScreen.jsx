@@ -3,9 +3,14 @@ import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import useAuthStore from "../store/authStore";
+import { useNavigation } from "@react-navigation/native";
 
 export default function ProfileScreen() {
   const { colors, isDarkMode, toggleTheme } = useTheme();
+  const navigation = useNavigation();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
 
   const userStats = [
     { id: 1, title: "Completed", count: 45, icon: "checkmark-circle" },
@@ -34,6 +39,13 @@ export default function ProfileScreen() {
     },
   ];
 
+  const handleLogout = async () => {
+    const success = await logout();
+    if (success) {
+      // Navigation will automatically redirect to Login due to auth state change
+    }
+  };
+
   return (
     <SafeAreaView
       style={{ backgroundColor: colors.background }}
@@ -46,18 +58,18 @@ export default function ProfileScreen() {
           className="p-6 items-center"
         >
           <Image
-            source={{ uri: "https://i.pravatar.cc/150" }}
+            source={require("../../assets/icon.png")}
             className="w-24 h-24 rounded-full"
           />
           <Text
             style={{ color: colors.text }}
             className="text-xl font-bold mt-4"
           >
-            John Doe
+            {user?.username}
           </Text>
-          <Text style={{ color: colors.textSecondary }}>Senior Developer</Text>
+          <Text style={{ color: colors.textSecondary }}>{user?.role}</Text>
           <Text style={{ color: colors.primary }} className="mt-1">
-            john.doe@company.com
+            {user?.username.toLowerCase()}@pln.co.id
           </Text>
 
           <View className="flex-row mt-6 w-full justify-around">
@@ -184,7 +196,10 @@ export default function ProfileScreen() {
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity className="m-6 bg-red-500 py-3 rounded-lg">
+        <TouchableOpacity
+          onPress={handleLogout}
+          className="m-6 bg-red-500 py-3 rounded-lg"
+        >
           <Text className="text-white text-center font-semibold">Logout</Text>
         </TouchableOpacity>
       </ScrollView>

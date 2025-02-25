@@ -11,7 +11,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
-import * as Camera from "expo-camera";
 
 export default function TaskCompleteScreen({ navigation }) {
   const { colors } = useTheme();
@@ -19,61 +18,107 @@ export default function TaskCompleteScreen({ navigation }) {
   const [image, setImage] = useState(null);
 
   const requestPermission = async (type) => {
-    if (type === "camera") {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Please grant camera access to take photos"
-        );
-        return false;
+    try {
+      if (type === "camera") {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        console.log("Camera permission status:", status);
+        if (status !== "granted") {
+          Alert.alert(
+            "Permission Required",
+            "Please grant camera access to take photos",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Open Settings",
+                onPress: () => ImagePicker.openSettings(),
+              },
+            ]
+          );
+          return false;
+        }
+      } else {
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        console.log("Media Library permission status:", status);
+        if (status !== "granted") {
+          Alert.alert(
+            "Permission Required",
+            "Please grant gallery access to select photos",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Open Settings",
+                onPress: () => ImagePicker.openSettings(),
+              },
+            ]
+          );
+          return false;
+        }
       }
-    } else {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Please grant gallery access to select photos"
-        );
-        return false;
-      }
+      return true;
+    } catch (error) {
+      console.error(`Error requesting ${type} permission:`, error);
+      Alert.alert(
+        "Error",
+        `Failed to request ${type} permission: ${error.message}`
+      );
+      return false;
     }
-    return true;
   };
 
   const pickImage = async () => {
-    if (!(await requestPermission("gallery"))) return;
+    try {
+      if (!(await requestPermission("gallery"))) return;
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      console.log("Image picker result:", result);
+
+      if (!result.canceled) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image: " + error.message);
     }
   };
 
   const takePhoto = async () => {
-    if (!(await requestPermission("camera"))) return;
+    try {
+      if (!(await requestPermission("camera"))) return;
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      console.log("Camera result:", result);
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+      Alert.alert("Camera Error", "Failed to take photo: " + error.message, [
+        { text: "OK" },
+      ]);
     }
   };
 
   const handleSubmit = () => {
     if (!notes.trim()) {
       Alert.alert("Required", "Please add completion notes");
+      return;
+    }
+
+    if (!image) {
+      Alert.alert("Required", "Please attach a photo");
       return;
     }
 
