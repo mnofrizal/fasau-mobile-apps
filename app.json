@@ -28,7 +28,10 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
-      ]
+      ],
+      "navigationBarColor": "transparent",
+      "softwareNavigationBarColor": "adaptive",
+      "navigationBarStyle": "dark"
     },
     "web": {
       "favicon": "./assets/favicon.png"

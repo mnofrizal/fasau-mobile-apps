@@ -6,14 +6,16 @@ import {
   ActivityIndicator,
   TextInput,
   ScrollView,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FlashList } from "@shopify/flash-list";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import useTaskStore from "../store/taskStore";
-import { TaskStatus } from "../services/taskService";
+import { TaskCategory, TaskStatus } from "../services/taskService";
 import { format } from "date-fns";
+import { getCategoryColor, getStatusColor } from "../constants";
 
 export default function TasksScreen({ navigation }) {
   const { colors } = useTheme();
@@ -24,20 +26,6 @@ export default function TasksScreen({ navigation }) {
   useEffect(() => {
     fetchTasks();
   }, []);
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case TaskStatus.COMPLETED:
-        return "#10b981"; // green
-      case TaskStatus.INPROGRESS:
-        return "#3b82f6"; // blue
-      case TaskStatus.CANCEL:
-        return "#ef4444"; // red
-      case TaskStatus.BACKLOG:
-      default:
-        return "#f59e0b"; // amber
-    }
-  };
 
   const statusFilters = [
     { label: "All", value: null },
@@ -87,26 +75,43 @@ export default function TasksScreen({ navigation }) {
       style={{ backgroundColor: colors.card }}
       className="mx-4 mb-3 p-4 rounded-xl"
     >
-      <View className="flex-row justify-between items-start">
+      <View className="flex-row justify-between space-x-4">
         <View className="flex-1">
           <Text
             style={{ color: colors.text }}
-            className="text-lg font-semibold mb-1"
+            className="mb-1 text-base font-semibold capitalize"
           >
             {task.title}
           </Text>
-          <Text
-            style={{ color: colors.textSecondary }}
-            className="text-sm mb-2"
-          >
-            {task.taskReport?.pelapor} • {task.category}
-          </Text>
+          <View className="flex-row pb-3 items-center">
+            <Text style={{ color: colors.textSecondary }} className="text-xs">
+              {format(new Date(task.createdAt), "MMM d, yyyy")}{" "}
+            </Text>
+            <View className="mx-2 h-4 w-[1px] rotate-12 bg-gray-500" />
+            <Text style={{ color: colors.textSecondary }} className="text-xs">
+              {task.taskReport?.pelapor}
+            </Text>
+          </View>
+
           <View className="flex-row items-center">
+            <View
+              style={{
+                backgroundColor: `${getCategoryColor(task.category)}20`,
+              }}
+              className="mr-2 rounded-full px-3 py-1"
+            >
+              <Text
+                style={{ color: getCategoryColor(task.category) }}
+                className="text-xs font-medium"
+              >
+                {task.category}
+              </Text>
+            </View>
             <View
               style={{
                 backgroundColor: `${getStatusColor(task.status)}20`,
               }}
-              className="px-3 py-1 rounded-full mr-2"
+              className="mr-2 rounded-full px-3 py-1"
             >
               <Text
                 style={{ color: getStatusColor(task.status) }}
@@ -118,7 +123,7 @@ export default function TasksScreen({ navigation }) {
             {task.isUrgent && (
               <View
                 style={{ backgroundColor: "#ef444420" }}
-                className="px-3 py-1 rounded-full"
+                className="rounded-full px-3 py-1"
               >
                 <Text
                   style={{ color: "#ef4444" }}
@@ -130,9 +135,6 @@ export default function TasksScreen({ navigation }) {
             )}
           </View>
         </View>
-        <Text style={{ color: colors.textSecondary }} className="text-xs">
-          {format(new Date(task.createdAt), "MMM d, yyyy")}
-        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -203,33 +205,54 @@ export default function TasksScreen({ navigation }) {
           showsHorizontalScrollIndicator={false}
           className="px-4 mb-4 py-1"
         >
-          {statusFilters.map((filter, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => setSelectedStatus(filter.value)}
-              style={{
-                backgroundColor:
-                  selectedStatus === filter.value
-                    ? colors.primary
-                    : colors.isDarkMode
-                    ? "#1f2937"
-                    : "#f8fafc",
-              }}
-              className="px-4 py-2 rounded-full mr-2"
-            >
-              <Text
+          {statusFilters.map((filter, index) => {
+            const count = filter.value
+              ? tasks.filter((task) => task.status === filter.value).length
+              : tasks.length;
+
+            return (
+              <TouchableOpacity
+                key={index}
+                onPress={() => setSelectedStatus(filter.value)}
                 style={{
-                  color:
+                  backgroundColor:
                     selectedStatus === filter.value
-                      ? "white"
-                      : colors.textSecondary,
+                      ? colors.primary
+                      : colors.isDarkMode
+                      ? "#1f2937"
+                      : "#f8fafc",
                 }}
-                className="font-medium"
+                className="px-4 py-2 rounded-full mr-2 flex-row items-center space-x-2"
               >
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={{
+                    color:
+                      selectedStatus === filter.value
+                        ? "white"
+                        : colors.textSecondary,
+                  }}
+                  className="font-medium"
+                >
+                  {filter.label}
+                </Text>
+                <Text
+                  style={{
+                    color:
+                      selectedStatus === filter.value
+                        ? "white"
+                        : colors.textSecondary,
+                  }}
+                  className={`font-semibold  ${
+                    selectedStatus === filter.value
+                      ? "bg-[#1f2937]"
+                      : "bg-slate-700"
+                  } text-white rounded-full px-2 `}
+                >
+                  {count}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 

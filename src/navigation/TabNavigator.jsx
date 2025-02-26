@@ -36,6 +36,7 @@ export default function TabNavigator() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
+          height: 60,
           paddingBottom: 5,
           paddingTop: 5,
           backgroundColor: colors.card,

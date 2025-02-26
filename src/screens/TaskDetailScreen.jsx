@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Image,
   Modal,
   Dimensions,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,6 +22,18 @@ export default function TaskDetailScreen({ route, navigation }) {
   const task = useTaskStore((state) => state.getTaskById(route.params?.taskId));
   const windowWidth = Dimensions.get("window").width;
   const windowHeight = Dimensions.get("window").height;
+  const [scrollY] = useState(new Animated.Value(0));
+
+  const headerHeight = 200;
+  const headerScale = scrollY.interpolate({
+    inputRange: [-100, 0, 100],
+    outputRange: [1.5, 1, 0.9],
+  });
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, headerHeight - 60],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
 
   if (!task) {
     return (
@@ -87,250 +100,266 @@ export default function TaskDetailScreen({ route, navigation }) {
     }
   };
 
+  const renderHeader = () => (
+    <Animated.View
+      style={{
+        transform: [{ scale: headerScale }],
+        opacity: headerOpacity,
+        height: headerHeight,
+        backgroundColor: colors.card,
+        padding: 20,
+        justifyContent: "flex-end",
+      }}
+    >
+      <View className="flex-row items-center space-x-2 mb-4">
+        <View
+          className={`px-3 py-1 rounded-full ${getCategoryColor(
+            task.category
+          )}`}
+        >
+          <Text
+            className={`text-sm font-medium ${getCategoryColor(task.category)}`}
+          >
+            {task.category}
+          </Text>
+        </View>
+        <View
+          className={`px-3 py-1 rounded-full ${getStatusColor(task.status)}`}
+        >
+          <Text
+            className={`text-sm font-medium ${getStatusColor(task.status)}`}
+          >
+            {task.status}
+          </Text>
+        </View>
+        {task.isUrgent && (
+          <View className="px-3 py-1 rounded-full bg-red-500">
+            <Text className="text-sm font-medium text-white">Urgent</Text>
+          </View>
+        )}
+      </View>
+      <Text style={{ color: colors.text }} className="text-3xl font-bold">
+        {task.title}
+      </Text>
+    </Animated.View>
+  );
+
   return (
     <SafeAreaView
       style={{ backgroundColor: colors.background }}
       className="flex-1"
     >
-      <ScrollView className="flex-1">
-        {/* Header */}
-        <View style={{ backgroundColor: colors.card }} className="p-4">
-          <View className="flex-row items-center justify-between">
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              className="p-2"
-            >
-              <Ionicons name="arrow-back" size={20} color={colors.text} />
-            </TouchableOpacity>
-            <View className="flex-row items-center space-x-2">
-              <View
-                className={`px-3 py-1 rounded-full ${getCategoryColor(
-                  task.category
-                )}`}
-              >
-                <Text
-                  className={`font-medium ${getCategoryColor(task.category)}`}
-                >
-                  {task.category}
-                </Text>
-              </View>
-              <View
-                className={`px-3 py-1 rounded-full ${getStatusColor(
-                  task.status
-                )}`}
-              >
-                <Text className={`font-medium ${getStatusColor(task.status)}`}>
-                  {task.status}
-                </Text>
-              </View>
-            </View>
-          </View>
+      {/* Back Button */}
+      <View className="absolute top-0 left-0 z-10 m-4">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ backgroundColor: colors.card }}
+          className="p-2 rounded-full shadow-md"
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      </View>
 
-          <Text
-            style={{ color: colors.text }}
-            className="mt-3 text-2xl font-bold"
-          >
-            {task.title}
-          </Text>
-        </View>
+      <Animated.ScrollView
+        className="flex-1"
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+      >
+        {renderHeader()}
 
-        {/* Task Details */}
-        <View style={{ backgroundColor: colors.card }} className="mt-3 p-4">
-          <View className="flex-row justify-between">
-            {task.keterangan && (
-              <View className="flex-1">
-                <Text
-                  style={{ color: colors.text }}
-                  className="mb-2 text-base font-semibold"
-                >
-                  Keterangan
-                </Text>
-                <Text
-                  style={{ color: colors.textSecondary }}
-                  className="text-sm"
-                >
-                  {task.keterangan}
-                </Text>
-              </View>
-            )}
-            {task.taskReport?.evidence && (
-              <View className="">
-                <TouchableOpacity onPress={() => setImageModalVisible(true)}>
-                  <Image
-                    source={{ uri: task.taskReport?.evidence }}
-                    style={{ width: 100, height: 100 }}
-                    className="rounded"
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
-          {task.isUrgent && (
-            <View
-              style={{ backgroundColor: "#fee2e2" }}
-              className="mb-4 rounded-lg p-3"
-            >
-              <View className="flex-row items-center">
-                <Ionicons name="alert-circle" size={20} color="#dc2626" />
-                <Text className="ml-2 font-medium text-red-600">
-                  Urgent Task
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
-
+        {/* Content Cards */}
+        {/* Task Info Card */}
         <View
           style={{ backgroundColor: colors.card }}
-          className="border-t border-t-slate-700 p-4"
+          className="mx-4 my-4 p-5 rounded-xl shadow-sm"
         >
-          <View className="">
-            <Text
-              style={{ color: colors.text }}
-              className="mb-2 text-base font-semibold"
-            >
-              Dilaporkan Oleh
-            </Text>
-            <View className="flex-row items-center">
-              <Ionicons
-                name="person-outline"
-                size={15}
-                color={colors.textSecondary}
-              />
-              <Text style={{ color: colors.textSecondary }} className="ml-2">
+          {/* Reporter Info */}
+          <View
+            className="flex-row items-center mb-4 pb-4 border-b"
+            style={{ borderColor: colors.border }}
+          >
+            <View className="h-10 w-10 rounded-full bg-blue-500 items-center justify-center">
+              <Ionicons name="person" size={20} color="white" />
+            </View>
+            <View className="ml-3">
+              <Text style={{ color: colors.textSecondary }} className="text-sm">
+                Dilaporkan oleh
+              </Text>
+              <Text style={{ color: colors.text }} className="font-semibold">
                 {task.taskReport?.pelapor}
               </Text>
             </View>
-            <View className="mt-2 flex-row items-center">
-              <Ionicons
-                name="calendar-outline"
-                size={15}
-                color={colors.textSecondary}
-              />
-              <Text style={{ color: colors.textSecondary }} className="ml-2">
-                {format(new Date(task.createdAt), "PPP")}
+            <View className="ml-auto">
+              <Text
+                style={{ color: colors.textSecondary }}
+                className="text-right text-sm"
+              >
+                {format(new Date(task.createdAt), "dd MMM yyyy")}
               </Text>
             </View>
           </View>
-        </View>
 
-        {task.taskReport?.tindakan && (
-          <View
-            style={{ backgroundColor: colors.card }}
-            className="border-t border-t-slate-700 p-4"
-          >
+          {/* Description */}
+          {task.keterangan && (
             <View className="mb-4">
               <Text
                 style={{ color: colors.text }}
-                className="mb-2 text-base font-semibold"
+                className="text-base font-semibold mb-2"
+              >
+                Keterangan
+              </Text>
+              <Text
+                style={{ color: colors.textSecondary }}
+                className="text-base leading-6"
+              >
+                {task.keterangan}
+              </Text>
+            </View>
+          )}
+
+          {/* Evidence Image */}
+          {task.taskReport?.evidence && (
+            <TouchableOpacity
+              onPress={() => setImageModalVisible(true)}
+              className="mt-2"
+            >
+              <Image
+                source={{ uri: task.taskReport?.evidence }}
+                style={{ width: "100%", height: 200 }}
+                className="rounded-lg"
+              />
+              <View className="absolute bottom-2 right-2 bg-black/50 px-3 py-1 rounded-full">
+                <Text className="text-white text-xs">View Full</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Action Card */}
+        {task.taskReport?.tindakan && (
+          <View
+            style={{ backgroundColor: colors.card }}
+            className="mx-4 mb-4 p-5 rounded-xl shadow-sm"
+          >
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="construct" size={20} color={colors.primary} />
+              <Text
+                style={{ color: colors.text }}
+                className="ml-2 text-base font-semibold"
               >
                 Tindakan
               </Text>
-              <View className="flex-row items-center">
-                <Text style={{ color: colors.textSecondary }} className="ml-2">
-                  {task.taskReport?.tindakan}
-                </Text>
-              </View>
             </View>
+            <Text
+              style={{ color: colors.textSecondary }}
+              className="text-base leading-6"
+            >
+              {task.taskReport?.tindakan}
+            </Text>
           </View>
         )}
 
-        {/* Status History */}
-        <View style={{ backgroundColor: colors.card }} className="mt-3 p-4">
+        {/* Status History Card */}
+        <View
+          style={{ backgroundColor: colors.card }}
+          className="mx-4 mb-4 p-5 rounded-xl shadow-sm"
+        >
           <Text
             style={{ color: colors.text }}
-            className="mb-4 text-lg font-semibold"
+            className="text-lg font-semibold mb-4"
           >
             Riwayat Status
           </Text>
           {!task.statusHistory?.length ? (
-            <Text
-              style={{ color: colors.textSecondary }}
-              className="py-4 text-center"
-            >
-              No status history available
-            </Text>
+            <View className="py-8 items-center">
+              <Ionicons
+                name="time-outline"
+                size={40}
+                color={colors.textSecondary}
+              />
+              <Text
+                style={{ color: colors.textSecondary }}
+                className="mt-2 text-base"
+              >
+                No status history available
+              </Text>
+            </View>
           ) : (
             task.statusHistory
-              .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
               .map((history, index) => (
-                <View
-                  key={index}
-                  style={{ borderColor: colors.border }}
-                  className={`pb-4 ${
-                    index !== task.statusHistory.length - 1
-                      ? "border-l ml-2"
-                      : "ml-2"
-                  }`}
-                >
-                  <View className="flex-row items-start">
-                    <View
-                      className={`w-4 h-4 rounded-full ${
-                        colors.isDarkMode ? "bg-slate-700" : "bg-slate-200"
-                      } -ml-2`}
-                    />
-                    <View className="ml-4 flex-1">
-                      <View
-                        className={`rounded ${
-                          colors.isDarkMode ? "bg-slate-700" : "bg-slate-200"
-                        } px-2 py-1 w-full`}
-                      >
+                <View key={index} className="mb-4 last:mb-0">
+                  <View className="flex-row">
+                    {/* Status Badge */}
+                    <View className="w-2 rounded-full bg-blue-500 mr-4" />
+                    <View className="flex-1">
+                      <View className="flex-row items-center justify-between mb-1">
                         <Text
-                          className={`text-sm font-medium ${
-                            colors.isDarkMode ? "text-white" : ""
-                          }`}
+                          style={{ color: colors.text }}
+                          className="font-semibold"
                         >
                           {history.status}
                         </Text>
-                      </View>
-                      <Text
-                        style={{ color: colors.textSecondary }}
-                        className="mt-1 w-full text-sm"
-                      >
-                        {history.notes}
-                      </Text>
-                      <View className="mt-1 w-full flex-row items-center">
                         <Text
                           style={{ color: colors.textSecondary }}
                           className="text-xs"
                         >
-                          {format(new Date(history.createdAt), "PPp")}
-                        </Text>
-                        <Text
-                          style={{ color: colors.textSecondary }}
-                          className="ml-2 text-xs"
-                        >
-                          • {history.changedBy}
+                          {format(
+                            new Date(history.createdAt),
+                            "dd MMM yyyy, HH:mm"
+                          )}
                         </Text>
                       </View>
+                      {history.notes && (
+                        <Text
+                          style={{ color: colors.textSecondary }}
+                          className="mb-1"
+                        >
+                          {history.notes}
+                        </Text>
+                      )}
+                      <Text
+                        style={{ color: colors.textSecondary }}
+                        className="text-xs"
+                      >
+                        Changed by {history.changedBy}
+                      </Text>
                     </View>
                   </View>
+                  {index !== task.statusHistory.length - 1 && (
+                    <View
+                      className="w-0.5 h-4 bg-blue-500/20 ml-1"
+                      style={{ marginVertical: 4 }}
+                    />
+                  )}
                 </View>
               ))
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Action Buttons */}
-      <View
-        style={{ backgroundColor: colors.card, borderColor: colors.border }}
-        className="border-t p-4"
-      >
-        {task.status !== "COMPLETED" && task.status !== "CANCEL" && (
+      {task.status !== "COMPLETED" && task.status !== "CANCEL" && (
+        <View
+          style={{ backgroundColor: colors.card }}
+          className="p-4 shadow-lg"
+        >
           <View className="flex-row space-x-4">
             <TouchableOpacity
-              className="flex-1 rounded-lg bg-red-500 py-3"
+              className="flex-1 rounded-xl bg-red-500/10 py-4"
               onPress={() => {
                 /* Handle cancel task */
               }}
             >
-              <Text className="text-center font-semibold text-white">
+              <Text className="text-center font-semibold text-red-500">
                 Batalkan
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              className="flex-1 rounded-lg bg-blue-500 py-3"
+              className="flex-1 rounded-xl bg-blue-500 py-4"
               onPress={() =>
                 navigation.navigate("TaskComplete", { taskId: task.id })
               }
@@ -340,8 +369,8 @@ export default function TaskDetailScreen({ route, navigation }) {
               </Text>
             </TouchableOpacity>
           </View>
-        )}
-      </View>
+        </View>
+      )}
 
       {/* Image Modal */}
       <Modal

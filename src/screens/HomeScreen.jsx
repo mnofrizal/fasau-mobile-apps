@@ -15,6 +15,7 @@ import useAuthStore from "../store/authStore";
 import useTaskStore from "../store/taskStore";
 import { TaskCategory, TaskStatus } from "../services/taskService";
 import { format } from "date-fns";
+import { getCategoryColor, getStatusColor } from "../constants";
 
 export default function HomeScreen({ navigation }) {
   const { colors } = useTheme();
@@ -125,35 +126,7 @@ export default function HomeScreen({ navigation }) {
       .slice(0, 7);
   }, [tasks]);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case TaskStatus.COMPLETED:
-        return "#10b981"; // green
-      case TaskStatus.INPROGRESS:
-        return "#3b82f6"; // blue
-      case TaskStatus.CANCEL:
-        return "#ef4444"; // red
-      case TaskStatus.BACKLOG:
-        return "#14b8a6"; // teal
-      default:
-        return "#f59e0b"; // amber
-    }
-  };
-
-  const getCategoryColor = (category) => {
-    switch (category) {
-      case TaskCategory.TASK:
-        return "#10b981"; // green
-      case TaskCategory.TEMUAN:
-        return "#f59e0b"; // blue
-      case TaskCategory.LAPORAN:
-        return "#8b5cf6"; // purple
-      default:
-        return "#f59e0b"; // amber
-    }
-  };
-
-  const headerHeight = user?.role === "ADMIN" ? 160 : 70; // Adjust based on whether search bar is shown
+  const headerHeight = user?.role === "ADMIN" ? 160 : 85; // Adjust based on whether search bar is shown
 
   return (
     <SafeAreaView
@@ -233,7 +206,7 @@ export default function HomeScreen({ navigation }) {
         }}
       >
         {/* Stats Grid */}
-        <View className="px-4 pt-4">
+        <View className="px-4 ">
           <View className="flex-row justify-between">
             {taskStats.map((stat, index) => (
               <TouchableOpacity
@@ -314,11 +287,11 @@ export default function HomeScreen({ navigation }) {
               style={{ color: colors.text }}
               className="text-lg font-semibold"
             >
-              Recent Tasks
+              Tugas Terbaru
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate("Tasks")}>
               <Text style={{ color: colors.primary }} className="text-base">
-                See All
+                Lihat Semua
               </Text>
             </TouchableOpacity>
           </View>
@@ -341,38 +314,36 @@ export default function HomeScreen({ navigation }) {
                       <TouchableOpacity>
                         <Image
                           source={{ uri: task.taskReport?.evidence }}
-                          style={{ width: 85, height: 85 }}
+                          style={{ width: 60, height: 90 }}
                           className="rounded-lg"
                         />
                       </TouchableOpacity>
                     </View>
-                    <Text
-                      style={{ color: colors.textSecondary }}
-                      className="pt-3 text-xs"
-                    >
-                      {format(new Date(task.createdAt), "MMM d, yyyy")}
-                    </Text>
                   </View>
                 )}
                 <View className="flex-1">
                   <Text
                     style={{ color: colors.text }}
-                    className="mb-1 text-base font-semibold"
+                    className="mb-1 text-base font-semibold capitalize"
                   >
                     {task.title}
                   </Text>
-                  <Text
-                    style={{ color: colors.textSecondary }}
-                    className="mb-2 text-sm"
-                  >
-                    {task.taskReport?.pelapor
-                      ? task.taskReport?.pelapor
-                      : "Admin"}{" "}
-                    •{" "}
-                    {task.keterangan.length > 50
-                      ? `${task.keterangan.substring(0, 50)}...`
-                      : task.keterangan}
-                  </Text>
+                  <View className="flex-row pb-2 items-center">
+                    <Text
+                      style={{ color: colors.textSecondary }}
+                      className="text-xs"
+                    >
+                      {format(new Date(task.createdAt), "MMM d, yyyy")}{" "}
+                    </Text>
+                    <View className="mx-2 h-4 w-[1px] rotate-12 bg-gray-500" />
+                    <Text
+                      style={{ color: colors.textSecondary }}
+                      className="text-xs"
+                    >
+                      {task.taskReport?.pelapor}
+                    </Text>
+                  </View>
+
                   <View className="flex-row items-center">
                     <View
                       style={{
