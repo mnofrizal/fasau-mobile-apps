@@ -6,6 +6,7 @@ const ALLOWED_PM_CATEGORIES = [
   TaskCategory.TASK,
   TaskCategory.TEMUAN,
   TaskCategory.LAPORAN,
+  TaskCategory.BACKLOG,
 ];
 
 const useTaskStore = create((set, get) => ({

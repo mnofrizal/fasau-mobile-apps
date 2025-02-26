@@ -134,6 +134,7 @@ export default function HomeScreen({ navigation }) {
       case TaskStatus.CANCEL:
         return "#ef4444"; // red
       case TaskStatus.BACKLOG:
+        return "#14b8a6"; // teal
       default:
         return "#f59e0b"; // amber
     }
@@ -152,68 +153,87 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  const headerHeight = user?.role === "ADMIN" ? 160 : 70; // Adjust based on whether search bar is shown
+
   return (
     <SafeAreaView
       style={{ backgroundColor: colors.background }}
       className="flex-1"
     >
-      <ScrollView
-        className="flex-1"
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={fetchTasks} />
-        }
+      {/* Fixed Header */}
+      <View
+        style={{
+          backgroundColor: colors.background,
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1,
+          height: headerHeight,
+          borderBottomWidth: 0,
+          borderBottomColor: colors.border,
+        }}
       >
-        {/* Header Section */}
-        <View className="p-4 mb-2">
-          <View className="flex-row justify-between items-center">
+        <View className="p-4">
+          <View className="flex-row items-center justify-between">
             <View>
               <Text
                 style={{ color: colors.textSecondary }}
-                className="text-base mb-1"
+                className="mb-1 text-base"
               >
                 Welcome back 👋
               </Text>
               <Text
                 style={{ color: colors.text }}
-                className="text-2xl uppercase font-semibold"
+                className="text-2xl font-semibold uppercase"
               >
                 {user?.username}
               </Text>
             </View>
             <TouchableOpacity
               onPress={() => navigation.navigate("Profile")}
-              className="w-12 h-12 rounded-full overflow-hidden"
+              className="h-12 w-12 overflow-hidden rounded-full"
             >
               <Image
                 source={require("../../assets/icon.png")}
-                className="w-full h-full"
+                className="h-full w-full"
                 resizeMode="cover"
               />
             </TouchableOpacity>
           </View>
 
-          {/* Search Bar */}
+          {/* Search Bar - Only for ADMIN */}
           {user?.role === "ADMIN" && (
             <View
               style={{
                 backgroundColor: colors.isDarkMode ? "#1f2937" : "#f8fafc",
                 borderColor: colors.border,
               }}
-              className="flex-row items-center px-4 py-3 rounded-xl mt-4 border"
+              className="mt-4 flex-row items-center rounded-xl border px-4 py-3"
             >
               <Ionicons name="search" size={20} color={colors.textSecondary} />
               <TextInput
                 placeholder="Search for tasks..."
                 placeholderTextColor={colors.textSecondary}
                 style={{ color: colors.text }}
-                className="flex-1 ml-2 text-base"
+                className="ml-2 flex-1 text-base"
               />
             </View>
           )}
         </View>
+      </View>
 
+      <ScrollView
+        className="flex-1"
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={fetchTasks} />
+        }
+        contentContainerStyle={{
+          paddingTop: headerHeight, // Add padding to account for fixed header
+        }}
+      >
         {/* Stats Grid */}
-        <View className="px-4">
+        <View className="px-4 pt-4">
           <View className="flex-row justify-between">
             {taskStats.map((stat, index) => (
               <TouchableOpacity
@@ -221,11 +241,11 @@ export default function HomeScreen({ navigation }) {
                 style={{
                   backgroundColor: colors.isDarkMode ? colors.card : "#ffffff",
                 }}
-                className="w-[31%] p-4 rounded-2xl shadow-sm"
+                className="w-[31%] rounded-2xl p-4 shadow-sm"
               >
                 <View
                   style={{ backgroundColor: `${stat.color}20` }}
-                  className="w-10 h-10 rounded-full items-center justify-center mb-2"
+                  className="mb-2 h-10 w-10 items-center justify-center rounded-full"
                 >
                   <Ionicons name={stat.icon} size={20} color={stat.color} />
                 </View>
@@ -237,7 +257,7 @@ export default function HomeScreen({ navigation }) {
                 </Text>
                 <Text
                   style={{ color: colors.textSecondary }}
-                  className="text-sm mt-1"
+                  className="mt-1 text-sm"
                 >
                   {stat.title}
                 </Text>
@@ -251,7 +271,7 @@ export default function HomeScreen({ navigation }) {
           <View className="p-4">
             <Text
               style={{ color: colors.text }}
-              className="text-lg font-semibold mb-4"
+              className="mb-4 text-lg font-semibold"
             >
               Quick Menu
             </Text>
@@ -265,12 +285,12 @@ export default function HomeScreen({ navigation }) {
                       : "#ffffff",
                     width: "23%",
                   }}
-                  className="mb-4 p-3 rounded-2xl shadow-sm items-center"
+                  className="mb-4 items-center rounded-2xl p-3 shadow-sm"
                   onPress={() => navigation.navigate(item.route)}
                 >
                   <View
                     style={{ backgroundColor: `${item.color}20` }}
-                    className="w-12 h-12 rounded-full items-center justify-center mb-2"
+                    className="mb-2 h-12 w-12 items-center justify-center rounded-full"
                   >
                     <Ionicons name={item.icon} size={24} color={item.color} />
                   </View>
@@ -289,7 +309,7 @@ export default function HomeScreen({ navigation }) {
 
         {/* Recent Tasks */}
         <View className="p-4">
-          <View className="flex-row justify-between items-center mb-4">
+          <View className="mb-4 flex-row items-center justify-between">
             <Text
               style={{ color: colors.text }}
               className="text-lg font-semibold"
@@ -309,34 +329,56 @@ export default function HomeScreen({ navigation }) {
               style={{
                 backgroundColor: colors.isDarkMode ? colors.card : "#ffffff",
               }}
-              className="p-4 rounded-xl mb-3 shadow-sm"
+              className="mb-3 rounded-xl p-4 shadow-sm"
               onPress={() =>
                 navigation.navigate("TaskDetail", { taskId: task.id })
               }
             >
-              <View className="flex-row justify-between items-start">
+              <View className="flex-row justify-between space-x-4">
+                {task.taskReport?.evidence && (
+                  <View className="flex items-center justify-center">
+                    <View className="">
+                      <TouchableOpacity>
+                        <Image
+                          source={{ uri: task.taskReport?.evidence }}
+                          style={{ width: 85, height: 85 }}
+                          className="rounded-lg"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    <Text
+                      style={{ color: colors.textSecondary }}
+                      className="pt-3 text-xs"
+                    >
+                      {format(new Date(task.createdAt), "MMM d, yyyy")}
+                    </Text>
+                  </View>
+                )}
                 <View className="flex-1">
                   <Text
                     style={{ color: colors.text }}
-                    className="text-base font-semibold mb-1"
+                    className="mb-1 text-base font-semibold"
                   >
                     {task.title}
                   </Text>
                   <Text
                     style={{ color: colors.textSecondary }}
-                    className="text-sm mb-2"
+                    className="mb-2 text-sm"
                   >
                     {task.taskReport?.pelapor
                       ? task.taskReport?.pelapor
                       : "Admin"}{" "}
-                    • {task.keterangan}
+                    •{" "}
+                    {task.keterangan.length > 50
+                      ? `${task.keterangan.substring(0, 50)}...`
+                      : task.keterangan}
                   </Text>
                   <View className="flex-row items-center">
                     <View
                       style={{
                         backgroundColor: `${getCategoryColor(task.category)}20`,
                       }}
-                      className="px-3 py-1 rounded-full mr-2"
+                      className="mr-2 rounded-full px-3 py-1"
                     >
                       <Text
                         style={{ color: getCategoryColor(task.category) }}
@@ -349,7 +391,7 @@ export default function HomeScreen({ navigation }) {
                       style={{
                         backgroundColor: `${getStatusColor(task.status)}20`,
                       }}
-                      className="px-3 py-1 rounded-full mr-2"
+                      className="mr-2 rounded-full px-3 py-1"
                     >
                       <Text
                         style={{ color: getStatusColor(task.status) }}
@@ -361,7 +403,7 @@ export default function HomeScreen({ navigation }) {
                     {task.isUrgent && (
                       <View
                         style={{ backgroundColor: "#ef444420" }}
-                        className="px-3 py-1 rounded-full"
+                        className="rounded-full px-3 py-1"
                       >
                         <Text
                           style={{ color: "#ef4444" }}
@@ -373,12 +415,6 @@ export default function HomeScreen({ navigation }) {
                     )}
                   </View>
                 </View>
-                <Text
-                  style={{ color: colors.textSecondary }}
-                  className="text-xs"
-                >
-                  {format(new Date(task.createdAt), "MMM d, yyyy")}
-                </Text>
               </View>
             </TouchableOpacity>
           ))}
