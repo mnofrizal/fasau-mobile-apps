@@ -1,5 +1,13 @@
 import { TaskCategory, TaskStatus } from "./services/taskService";
 
+// Cloudinary configuration
+export const CLOUDINARY_CONFIG = {
+  cloudName: "dajrhxyfu",
+  apiKey: "318327463344866",
+  apiSecret: "rKx2EROQieTNiR0CwPxq5813ZUI",
+  uploadPreset: "FasPoint",
+};
+
 export const getCategoryColor = (category) => {
   switch (category) {
     case TaskCategory.TASK:

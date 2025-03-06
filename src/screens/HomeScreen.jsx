@@ -32,7 +32,7 @@ export default function HomeScreen({ navigation }) {
   }, [tasks]);
 
   const menuItems = [
-    { id: 1, title: "Tasks", icon: "list", color: "#3b82f6", route: "Tasks" },
+    { id: 1, title: "Tugas", icon: "list", color: "#3b82f6", route: "Tasks" },
     {
       id: 2,
       title: "Inventory",
@@ -91,19 +91,19 @@ export default function HomeScreen({ navigation }) {
 
     return [
       {
-        title: "Total Tasks",
+        title: "Total Tugas",
         count: stats.total,
         color: "#3b82f6",
         icon: "list",
       },
       {
-        title: "Active Tasks",
+        title: "Tugas Aktif",
         count: stats.inProgress + stats.backlog,
         color: "#f59e0b",
         icon: "time",
       },
       {
-        title: "Completed",
+        title: "Selesai",
         count: stats.completed,
         color: "#10b981",
         icon: "checkmark-circle",
@@ -154,7 +154,7 @@ export default function HomeScreen({ navigation }) {
                 style={{ color: colors.textSecondary }}
                 className="mb-1 text-base"
               >
-                Welcome back 👋
+                Selamat datang kembali 👋
               </Text>
               <Text
                 style={{ color: colors.text }}
@@ -186,7 +186,7 @@ export default function HomeScreen({ navigation }) {
             >
               <Ionicons name="search" size={20} color={colors.textSecondary} />
               <TextInput
-                placeholder="Search for tasks..."
+                placeholder="Cari tugas..."
                 placeholderTextColor={colors.textSecondary}
                 style={{ color: colors.text }}
                 className="ml-2 flex-1 text-base"
@@ -246,7 +246,7 @@ export default function HomeScreen({ navigation }) {
               style={{ color: colors.text }}
               className="mb-4 text-lg font-semibold"
             >
-              Quick Menu
+              Menu Cepat
             </Text>
             <View className="flex-row flex-wrap justify-between">
               {menuItems.map((item) => (
@@ -380,7 +380,7 @@ export default function HomeScreen({ navigation }) {
                           style={{ color: "#ef4444" }}
                           className="text-xs font-medium"
                         >
-                          Urgent
+                          Mendesak
                         </Text>
                       </View>
                     )}

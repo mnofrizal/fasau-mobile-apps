@@ -6,16 +6,23 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
+import { taskService, TaskStatus } from "../services/taskService";
+import { cloudinaryService } from "../services/cloudinaryService";
+import useAuthStore from "../store/authStore";
 
-export default function TaskCompleteScreen({ navigation }) {
+export default function TaskCompleteScreen({ navigation, route }) {
   const { colors } = useTheme();
   const [notes, setNotes] = useState("");
   const [image, setImage] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const user = useAuthStore((state) => state.user);
+  const { taskId, title } = route.params;
 
   const requestPermission = async (type) => {
     try {
@@ -24,12 +31,12 @@ export default function TaskCompleteScreen({ navigation }) {
         console.log("Camera permission status:", status);
         if (status !== "granted") {
           Alert.alert(
-            "Permission Required",
-            "Please grant camera access to take photos",
+            "Izin Diperlukan",
+            "Mohon izinkan akses kamera untuk mengambil foto",
             [
-              { text: "Cancel", style: "cancel" },
+              { text: "Batal", style: "cancel" },
               {
-                text: "Open Settings",
+                text: "Buka Pengaturan",
                 onPress: () => ImagePicker.openSettings(),
               },
             ]
@@ -42,12 +49,12 @@ export default function TaskCompleteScreen({ navigation }) {
         console.log("Media Library permission status:", status);
         if (status !== "granted") {
           Alert.alert(
-            "Permission Required",
-            "Please grant gallery access to select photos",
+            "Izin Diperlukan",
+            "Mohon izinkan akses galeri untuk memilih foto",
             [
-              { text: "Cancel", style: "cancel" },
+              { text: "Batal", style: "cancel" },
               {
-                text: "Open Settings",
+                text: "Buka Pengaturan",
                 onPress: () => ImagePicker.openSettings(),
               },
             ]
@@ -58,10 +65,7 @@ export default function TaskCompleteScreen({ navigation }) {
       return true;
     } catch (error) {
       console.error(`Error requesting ${type} permission:`, error);
-      Alert.alert(
-        "Error",
-        `Failed to request ${type} permission: ${error.message}`
-      );
+      Alert.alert("Error", `Gagal meminta izin ${type}: ${error.message}`);
       return false;
     }
   };
@@ -84,7 +88,7 @@ export default function TaskCompleteScreen({ navigation }) {
       }
     } catch (error) {
       console.error("Error picking image:", error);
-      Alert.alert("Error", "Failed to pick image: " + error.message);
+      Alert.alert("Error", "Gagal memilih gambar: " + error.message);
     }
   };
 
@@ -105,25 +109,47 @@ export default function TaskCompleteScreen({ navigation }) {
       }
     } catch (error) {
       console.error("Error taking photo:", error);
-      Alert.alert("Camera Error", "Failed to take photo: " + error.message, [
+      Alert.alert("Error Kamera", "Gagal mengambil foto: " + error.message, [
         { text: "OK" },
       ]);
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!notes.trim()) {
-      Alert.alert("Required", "Please add completion notes");
+      Alert.alert("Diperlukan", "Mohon tambahkan catatan penyelesaian");
       return;
     }
 
-    if (!image) {
-      Alert.alert("Required", "Please attach a photo");
-      return;
-    }
+    try {
+      setIsSubmitting(true);
 
-    // In a real app, you would upload the image and notes to your backend
-    navigation.navigate("TaskSuccess");
+      let imageUrl = null;
+      if (image) {
+        // Only upload image if one was selected
+        imageUrl = await cloudinaryService.uploadImage(image);
+        console.log("Image uploaded successfully:", imageUrl);
+      }
+
+      // Update the task with or without image URL
+      await taskService.updateTask(taskId, {
+        title,
+        status: TaskStatus.COMPLETED,
+        notes: notes,
+        changedBy: user.username,
+        evidenceDone: imageUrl,
+      });
+
+      navigation.navigate("TaskSuccess");
+    } catch (error) {
+      console.error("Error completing task:", error);
+      Alert.alert(
+        "Error",
+        error.message || "Gagal menyelesaikan tugas. Silakan coba lagi."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -144,7 +170,7 @@ export default function TaskCompleteScreen({ navigation }) {
             style={{ color: colors.text }}
             className="text-xl font-semibold ml-2"
           >
-            Complete Task
+            Selesaikan Tugas
           </Text>
         </View>
 
@@ -153,14 +179,14 @@ export default function TaskCompleteScreen({ navigation }) {
           style={{ color: colors.text }}
           className="text-lg font-semibold mb-2"
         >
-          Completion Notes
+          Catatan Penyelesaian
         </Text>
         <TextInput
           multiline
           numberOfLines={4}
           value={notes}
           onChangeText={setNotes}
-          placeholder="Add any notes about task completion..."
+          placeholder="Tambahkan catatan tentang penyelesaian tugas..."
           placeholderTextColor={colors.textSecondary}
           style={{
             backgroundColor: colors.isDarkMode ? "#1e293b" : "#f8fafc",
@@ -175,42 +201,44 @@ export default function TaskCompleteScreen({ navigation }) {
           style={{ color: colors.text }}
           className="text-lg font-semibold mb-2"
         >
-          Attachments
+          Lampiran
         </Text>
-        <View className="flex-row mb-6">
-          <TouchableOpacity
-            onPress={pickImage}
-            style={{
-              backgroundColor: colors.isDarkMode ? "#1e293b" : "#f8fafc",
-              borderColor: colors.border,
-            }}
-            className="flex-1 mr-2 border rounded-lg p-4 items-center"
-          >
-            <Ionicons
-              name="image-outline"
-              size={24}
-              color={colors.primary}
-              className="mb-2"
-            />
-            <Text style={{ color: colors.text }}>Choose Image</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={takePhoto}
-            style={{
-              backgroundColor: colors.isDarkMode ? "#1e293b" : "#f8fafc",
-              borderColor: colors.border,
-            }}
-            className="flex-1 ml-2 border rounded-lg p-4 items-center"
-          >
-            <Ionicons
-              name="camera-outline"
-              size={24}
-              color={colors.primary}
-              className="mb-2"
-            />
-            <Text style={{ color: colors.text }}>Take Photo</Text>
-          </TouchableOpacity>
-        </View>
+        {!image && (
+          <View className="flex-row mb-6">
+            <TouchableOpacity
+              onPress={pickImage}
+              style={{
+                backgroundColor: colors.isDarkMode ? "#1e293b" : "#f8fafc",
+                borderColor: colors.border,
+              }}
+              className="flex-1 mr-2 border rounded-lg p-4 items-center"
+            >
+              <Ionicons
+                name="image-outline"
+                size={24}
+                color={colors.primary}
+                className="mb-2"
+              />
+              <Text style={{ color: colors.text }}>Pilih Gambar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={takePhoto}
+              style={{
+                backgroundColor: colors.isDarkMode ? "#1e293b" : "#f8fafc",
+                borderColor: colors.border,
+              }}
+              className="flex-1 ml-2 border rounded-lg p-4 items-center"
+            >
+              <Ionicons
+                name="camera-outline"
+                size={24}
+                color={colors.primary}
+                className="mb-2"
+              />
+              <Text style={{ color: colors.text }}>Ambil Foto</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {image && (
           <View className="mb-6">
@@ -237,9 +265,13 @@ export default function TaskCompleteScreen({ navigation }) {
             }}
             className="py-4 rounded-lg"
           >
-            <Text className="text-white text-center font-semibold text-lg">
-              Submit
-            </Text>
+            {isSubmitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-white text-center font-semibold text-lg">
+                Kirim
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>

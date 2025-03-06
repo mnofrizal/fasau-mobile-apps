@@ -14,11 +14,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import useTaskStore from "../store/taskStore";
 import { format } from "date-fns";
-import { TaskCategory } from "../services/taskService";
+import { TaskCategory, TaskStatus } from "../services/taskService";
 
 export default function TaskDetailScreen({ route, navigation }) {
   const { colors } = useTheme();
   const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const task = useTaskStore((state) => state.getTaskById(route.params?.taskId));
   const windowWidth = Dimensions.get("window").width;
   const windowHeight = Dimensions.get("window").height;
@@ -223,7 +224,10 @@ export default function TaskDetailScreen({ route, navigation }) {
           {/* Evidence Image */}
           {task.taskReport?.evidence && (
             <TouchableOpacity
-              onPress={() => setImageModalVisible(true)}
+              onPress={() => {
+                setSelectedImage(task.taskReport?.evidence);
+                setImageModalVisible(true);
+              }}
               className="mt-2"
             >
               <Image
@@ -294,7 +298,13 @@ export default function TaskDetailScreen({ route, navigation }) {
                 <View key={index} className="mb-4 last:mb-0">
                   <View className="flex-row">
                     {/* Status Badge */}
-                    <View className="w-2 rounded-full bg-blue-500 mr-4" />
+                    <View
+                      className={`w-2 rounded-full mr-4 ${
+                        history.status === TaskStatus.COMPLETED
+                          ? "bg-green-500"
+                          : "bg-blue-500"
+                      }`}
+                    />
                     <View className="flex-1">
                       <View className="flex-row items-center justify-between mb-1">
                         <Text
@@ -327,6 +337,27 @@ export default function TaskDetailScreen({ route, navigation }) {
                       >
                         Changed by {history.changedBy}
                       </Text>
+                      {history.status === TaskStatus.COMPLETED &&
+                        task.taskReport?.evidenceDone && (
+                          <TouchableOpacity
+                            className="mt-2"
+                            onPress={() => {
+                              setSelectedImage(task.taskReport.evidenceDone);
+                              setImageModalVisible(true);
+                            }}
+                          >
+                            <Image
+                              source={{ uri: task.taskReport.evidenceDone }}
+                              style={{ width: "100%", height: 100 }}
+                              className="rounded-lg"
+                            />
+                            <View className="absolute bottom-2 right-2 bg-black/50 px-3 py-1 rounded-full">
+                              <Text className="text-white text-xs">
+                                View Full
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        )}
                     </View>
                   </View>
                   {index !== task.statusHistory.length - 1 && (
@@ -361,7 +392,10 @@ export default function TaskDetailScreen({ route, navigation }) {
             <TouchableOpacity
               className="flex-1 rounded-xl bg-blue-500 py-4"
               onPress={() =>
-                navigation.navigate("TaskComplete", { taskId: task.id })
+                navigation.navigate("TaskComplete", {
+                  taskId: task.id,
+                  title: task.title,
+                })
               }
             >
               <Text className="text-center font-semibold text-white">
@@ -402,7 +436,7 @@ export default function TaskDetailScreen({ route, navigation }) {
           </TouchableOpacity>
           <View style={{ width: windowWidth * 0.9, alignItems: "center" }}>
             <Image
-              source={{ uri: task.taskReport?.evidence }}
+              source={{ uri: selectedImage }}
               style={{
                 width: windowWidth * 0.9,
                 height: windowHeight * 0.6,

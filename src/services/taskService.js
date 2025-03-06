@@ -13,16 +13,15 @@ export const taskService = {
     }
   },
 
-  // Add more task-related API calls here as needed, for example:
-  // getTaskById: async (id) => {
-  //   try {
-  //     const response = await api.get(`/tasks/${id}`);
-  //     return response.data;
-  //   } catch (error) {
-  //     console.error(`Error fetching task ${id}:`, error);
-  //     throw error;
-  //   }
-  // },
+  updateTask: async (taskId, updateData) => {
+    try {
+      const response = await api.put(`/tasks/${taskId}`, updateData);
+      return response;
+    } catch (error) {
+      console.error(`Error updating task ${taskId}:`, error);
+      throw error;
+    }
+  },
 };
 
 // Task status constants

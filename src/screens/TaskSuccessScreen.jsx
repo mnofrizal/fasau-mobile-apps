@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import React, { useEffect } from "react";
+import { View, Text, TouchableOpacity, BackHandler } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
@@ -7,8 +7,22 @@ import { useTheme } from "../context/ThemeContext";
 export default function TaskSuccessScreen({ navigation }) {
   const { colors } = useTheme();
 
+  useEffect(() => {
+    const backAction = () => {
+      navigation.navigate("Main");
+      return true; // Prevents default back behavior
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove(); // Cleanup on unmount
+  }, [navigation]);
+
   const handleGoHome = () => {
-    navigation.navigate("MainTabs", { screen: "Home" });
+    navigation.navigate("Main");
   };
 
   return (
@@ -35,15 +49,15 @@ export default function TaskSuccessScreen({ navigation }) {
           style={{ color: colors.text }}
           className="text-2xl font-bold text-center mb-3"
         >
-          Task Completed! 🎉
+          Tugas Selesai! 🎉
         </Text>
 
         <Text
           style={{ color: colors.textSecondary }}
           className="text-center mb-8 text-base"
         >
-          Great job! Your task has been marked as complete and the details have
-          been saved.
+          Kerja bagus! Tugas Anda telah ditandai sebagai selesai dan detailnya
+          telah disimpan.
         </Text>
 
         <TouchableOpacity
@@ -54,7 +68,7 @@ export default function TaskSuccessScreen({ navigation }) {
           className="w-full py-4 rounded-lg"
         >
           <Text className="text-white text-center font-semibold text-lg">
-            Back to Home
+            Kembali ke Beranda
           </Text>
         </TouchableOpacity>
       </View>
